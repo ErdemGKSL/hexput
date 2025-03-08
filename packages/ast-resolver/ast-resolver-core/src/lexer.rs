@@ -118,10 +118,8 @@ pub struct TokenError;
 fn string_literal(lex: &mut Lexer<Token>) -> Option<String> {
     let slice = lex.slice();
     
-    // Remove the quotes at the beginning and end
     let content = &slice[1..slice.len() - 1];
     
-    // Process escape sequences
     let mut processed = String::new();
     let mut chars = content.chars();
     
@@ -155,7 +153,6 @@ pub struct TokenWithSpan {
 }
 
 impl TokenWithSpan {
-    // Helper method to get source location from token span
     pub fn get_location(&self, source_code: &str) -> SourceLocation {
         SourceLocation::from_spans(source_code, self.span.start, self.span.end)
     }

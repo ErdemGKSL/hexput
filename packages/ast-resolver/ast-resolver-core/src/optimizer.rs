@@ -261,9 +261,15 @@ fn optimize_expression(expr: Expression, runtime: &Runtime) -> Expression {
             let result = Expression::KeysOfExpression { object: optimized_object, location };
             result
         },
-        Expression::MemberCallExpression { object, property, arguments, location } => {
+        Expression::MemberCallExpression { object, property, property_expr, computed, arguments, location } => {
             
             let optimized_object = Box::new(optimize_expression(*object, runtime));
+            
+            
+            let optimized_prop_expr = match property_expr {
+                Some(expr) => Some(Box::new(optimize_expression(*expr, runtime))),
+                None => None,
+            };
             
             
             let optimized_args = if arguments.len() > PARALLELISM_THRESHOLD {
@@ -272,9 +278,11 @@ fn optimize_expression(expr: Expression, runtime: &Runtime) -> Expression {
                 arguments.into_iter().map(|arg| optimize_expression(arg, runtime)).collect()
             };
             
-            Expression::MemberCallExpression { 
+            Expression::MemberCallExpression {
                 object: optimized_object,
                 property,
+                property_expr: optimized_prop_expr,
+                computed,
                 arguments: optimized_args,
                 location,
             }

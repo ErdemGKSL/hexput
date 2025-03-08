@@ -1174,7 +1174,9 @@ impl<'a> Parser<'a> {
                                                     
                                                     object = Expression::MemberCallExpression {
                                                         object: Box::new(object),
-                                                        property,
+                                                        property: Some(property),
+                                                        property_expr: None,
+                                                        computed: false,
                                                         arguments,
                                                         location: call_location,
                                                     };
@@ -1207,7 +1209,9 @@ impl<'a> Parser<'a> {
                                                         
                                                         object = Expression::MemberCallExpression {
                                                             object: Box::new(object),
-                                                            property,
+                                                            property: Some(property),
+                                                            property_expr: None,
+                                                            computed: false,
                                                             arguments,
                                                             location: call_location,
                                                         };
@@ -1257,7 +1261,145 @@ impl<'a> Parser<'a> {
                         }
                     },
                     
-                    
+                    Token::OpenBracket => {
+                        if !self.flags.allow_object_navigation {
+                            return Err(ParseError::FeatureDisabled("Object navigation (bracket notation)".to_string(), self.current_location()));
+                        }
+                        
+                        self.advance();
+                        
+                        let property_expr = self.parse_expression()?;
+                        
+                        let close_bracket_location = self.current_location();
+                        self.expect(Token::CloseBracket)?;
+                        
+                        let obj_start_line = match &object {
+                            Expression::StringLiteral { location, .. } |
+                            Expression::NumberLiteral { location, .. } |
+                            Expression::Identifier { location, .. } |
+                            Expression::BinaryExpression { location, .. } |
+                            Expression::AssignmentExpression { location, .. } |
+                            Expression::MemberAssignmentExpression { location, .. } |
+                            Expression::CallExpression { location, .. } |
+                            Expression::MemberCallExpression { location, .. } |  
+                            Expression::CallbackReference { location, .. } |
+                            Expression::ArrayExpression { location, .. } |
+                            Expression::ObjectExpression { location, .. } |
+                            Expression::MemberExpression { location, .. } |
+                            Expression::KeysOfExpression { location, .. } => location.start_line,
+                        };
+                        
+                        let obj_start_column = match &object {
+                            Expression::StringLiteral { location, .. } |
+                            Expression::NumberLiteral { location, .. } |
+                            Expression::Identifier { location, .. } |
+                            Expression::BinaryExpression { location, .. } |
+                            Expression::AssignmentExpression { location, .. } |
+                            Expression::MemberAssignmentExpression { location, .. } |
+                            Expression::CallExpression { location, .. } |
+                            Expression::MemberCallExpression { location, .. } |  
+                            Expression::CallbackReference { location, .. } |
+                            Expression::ArrayExpression { location, .. } |
+                            Expression::ObjectExpression { location, .. } |
+                            Expression::MemberExpression { location, .. } |
+                            Expression::KeysOfExpression { location, .. } => location.start_column,
+                        };
+                        
+                        let member_expr_location = SourceLocation::new(
+                            obj_start_line,
+                            obj_start_column,
+                            close_bracket_location.end_line,
+                            close_bracket_location.end_column
+                        );
+                        
+                        if let Some(token_with_span) = self.current_token {
+                            if token_with_span.token == Token::OpenParen {
+                                
+                                self.advance();
+                                
+                                let mut arguments = Vec::new();
+                                
+                                
+                                if let Some(token_with_span) = self.current_token {
+                                    if token_with_span.token == Token::CloseParen {
+                                        let end_call_location = self.current_location();
+                                        self.advance();
+                                        
+                                        let call_location = SourceLocation::new(
+                                            obj_start_line,
+                                            obj_start_column,
+                                            end_call_location.end_line,
+                                            end_call_location.end_column
+                                        );
+                                        
+                                        
+                                        object = Expression::MemberCallExpression {
+                                            object: Box::new(object),
+                                            property: None,
+                                            property_expr: Some(Box::new(property_expr)),
+                                            computed: true,
+                                            arguments,
+                                            location: call_location,
+                                        };
+                                        continue;
+                                    }
+                                }
+                                
+                                
+                                arguments.push(self.parse_expression()?);
+                                
+                                while let Some(token_with_span) = self.current_token {
+                                    match &token_with_span.token {
+                                        Token::Comma => {
+                                            self.advance();
+                                            arguments.push(self.parse_expression()?);
+                                        }
+                                        Token::CloseParen => {
+                                            let end_call_location = self.current_location();
+                                            self.advance();
+                                            
+                                            let call_location = SourceLocation::new(
+                                                obj_start_line,
+                                                obj_start_column,
+                                                end_call_location.end_line,
+                                                end_call_location.end_column
+                                            );
+                                            
+                                            
+                                            object = Expression::MemberCallExpression {
+                                                object: Box::new(object),
+                                                property: None,
+                                                property_expr: Some(Box::new(property_expr)),
+                                                computed: true,
+                                                arguments,
+                                                location: call_location,
+                                            };
+                                            break;
+                                        }
+                                        _ => return Err(ParseError::ExpectedToken("',' or ')'".to_string(), self.current_location())),
+                                    }
+                                }
+                            } else {
+                                
+                                object = Expression::MemberExpression {
+                                    object: Box::new(object),
+                                    property: None,
+                                    property_expr: Some(Box::new(property_expr)),
+                                    computed: true,
+                                    location: member_expr_location,
+                                };
+                            }
+                        } else {
+                            
+                            object = Expression::MemberExpression {
+                                object: Box::new(object),
+                                property: None,
+                                property_expr: Some(Box::new(property_expr)),
+                                computed: true,
+                                location: member_expr_location,
+                            };
+                        }
+                    },
                     _ => break,
                 },
                 None => break,

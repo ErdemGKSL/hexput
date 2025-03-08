@@ -196,7 +196,11 @@ pub enum Expression {
     #[serde(rename = "MEMBER_CALL_EXPRESSION")]
     MemberCallExpression {
         object: Box<Expression>,
-        property: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        property: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        property_expr: Option<Box<Expression>>,
+        computed: bool,
         arguments: Vec<Expression>,
         location: SourceLocation,
     },
