@@ -47,7 +47,7 @@ res getConfigValue("name", "defaultName");
 ```
 
 ```
-./target/debug/ast-resolver-core :: '
+./target/debug/ast-resolver-core --no-source-mapping :: '
 cb transformData(item, options) {
   vl result = {};
   
@@ -69,7 +69,7 @@ res transformData("sample", options);
 ```
 
 ```
-./target/debug/ast-resolver-core :: '
+./target/debug/ast-resolver-core --no-source-mapping :: '
 // Define a complex object with nested properties
 vl config = {
   name: "DataProcessor",
