@@ -1,10 +1,10 @@
 [package]
-name = "ast-resolver-core"
+name = "hexput-ast-api"
 version = "0.1.0"
 edition = "2024"
+description = "Core AST parsing and processing library"
 
 [dependencies]
-clap = { version = "4.4.8", features = ["derive"] }
 logos = "0.15.0"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.140"

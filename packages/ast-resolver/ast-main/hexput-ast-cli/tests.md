@@ -1,5 +1,5 @@
-```py
-./target/debug/ast-resolver-core :: '
+```ts
+cargo run -p hexput-ast-cli -r -- --no-source-mapping :: '
 vl config = {
   name: "DataProcessor",
   version: 1.5,
@@ -22,8 +22,8 @@ res getConfigValue("name", "defaultName");
 '
 ```
 
-```py
-./target/debug/ast-resolver-core --no-callbacks :: '
+```ts
+cargo run -p hexput-ast-cli -r -- --no-callbacks :: '
 vl config = {
   name: "DataProcessor",
   version: 1.5,
@@ -46,8 +46,8 @@ res getConfigValue("name", "defaultName");
 '
 ```
 
-```
-./target/debug/ast-resolver-core --no-source-mapping :: '
+```ts
+cargo run -p hexput-ast-cli -r -- --no-source-mapping :: '
 cb transformData(item, options) {
   vl result = {};
   
@@ -68,8 +68,8 @@ res transformData("sample", options);
 '
 ```
 
-```
-./target/debug/ast-resolver-core --no-source-mapping :: '
+```ts
+cargo run -p hexput-ast-cli -r -- --no-source-mapping :: '
 // Define a complex object with nested properties
 vl config = {
   name: "DataProcessor",

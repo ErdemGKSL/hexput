@@ -36,7 +36,6 @@ impl Default for FeatureFlags {
 }
 
 impl FeatureFlags {
-    
     pub fn all_enabled() -> Self {
         Self::default()
     }
@@ -66,19 +65,4 @@ impl FeatureFlags {
         flags
     }
 
-    pub fn from_cli_args(args: &clap::ArgMatches) -> Self {
-        Self {
-            allow_object_constructions: !args.get_flag("no-object-constructions"),
-            allow_array_constructions: !args.get_flag("no-array-constructions"),
-            allow_object_navigation: !args.get_flag("no-object-navigation"),
-            allow_variable_declaration: !args.get_flag("no-variable-declaration"),
-            allow_loops: !args.get_flag("no-loops"),
-            allow_object_keys: !args.get_flag("no-object-keys"),
-            allow_callbacks: !args.get_flag("no-callbacks"),
-            allow_conditionals: !args.get_flag("no-conditionals"),
-            allow_return_statements: !args.get_flag("no-return-statements"),
-            allow_loop_control: !args.get_flag("no-loop-control"),
-            allow_assignments: !args.get_flag("no-assignments"),
-        }
-    }
 }

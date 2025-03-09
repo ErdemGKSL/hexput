@@ -1,54 +1,10 @@
-pub mod ast_structs;
-pub mod lexer;
-pub mod parser;
-pub mod optimizer;
-pub mod feature_flags;
-pub mod parallel;
-
+use hexput_ast_api::feature_flags::FeatureFlags;
 use clap::{Arg, Command, ArgAction};
 use std::env;
 use std::process;
-use serde_json::{to_string_pretty, to_string, json};
-use feature_flags::FeatureFlags;
-
-struct LocationFilter<'a, T: ?Sized> {
-    inner: &'a T,
-}
-
-impl<'a, T: serde::Serialize + ?Sized> serde::Serialize for LocationFilter<'a, T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde_json::Value;
-
-        let value = serde_json::to_value(&self.inner).map_err(serde::ser::Error::custom)?;
-        
-        fn filter_locations(value: Value) -> Value {
-            match value {
-                Value::Object(mut map) => {
-                    map.remove("location");
-                    
-                    let filtered_map = map.into_iter()
-                        .map(|(k, v)| (k, filter_locations(v)))
-                        .collect();
-                    
-                    Value::Object(filtered_map)
-                },
-                Value::Array(arr) => {
-                    Value::Array(arr.into_iter().map(filter_locations).collect())
-                },
-                _ => value,
-            }
-        }
-
-        let filtered = filter_locations(value);
-        filtered.serialize(serializer)
-    }
-}
 
 fn main() {
-    let matches = Command::new("ast-resolver-core")
+    let matches = Command::new("ast-resolver-cli")
         .version("0.1.0")
         .about("AST resolver for a custom scripting language")
         .arg(Arg::new("code")
@@ -123,19 +79,18 @@ fn main() {
     
     let code = extract_code_from_args(&args);
     
-    let feature_flags = FeatureFlags::from_cli_args(&matches);
+    let feature_flags = create_feature_flags_from_cli_args(&matches);
     
     let minify = matches.get_flag("minify");
     
     let include_source_mapping = !matches.get_flag("no-source-mapping");
     
-    match process_code(&code, feature_flags) {
+    match hexput_ast_api::process_code(&code, feature_flags) {
         Ok(program) => {
-
             let json_result = if minify {
-                to_string_with_source_mapping(&program, include_source_mapping)
+                hexput_ast_api::to_json_string(&program, include_source_mapping)
             } else {
-                to_string_pretty_with_source_mapping(&program, include_source_mapping)
+                hexput_ast_api::to_json_string_pretty(&program, include_source_mapping)
             };
             
             match json_result {
@@ -149,20 +104,8 @@ fn main() {
             }
         }
         Err(e) => {
-            let error_json = json!({
-                "error": {
-                    "type": "ParseError",
-                    "message": format!("{}", e)
-                }
-            });
-            
-            let error_str = if minify {
-                to_string(&error_json)
-            } else {
-                to_string_pretty(&error_json)
-            };
-            
-            eprintln!("{}", error_str.unwrap());
+            let error_json = hexput_ast_api::format_error_as_json(&e, minify);
+            eprintln!("{}", error_json);
             process::exit(1);
         }
     }
@@ -194,39 +137,18 @@ fn extract_code_from_args(args: &[String]) -> String {
     }
 }
 
-fn process_code(code: &str, feature_flags: FeatureFlags) -> Result<ast_structs::Program, parser::ParseError> {
-    let runtime = parallel::create_runtime();
-    
-    let tokens = lexer::tokenize(code);
-    
-    let mut parser = parser::Parser::new(&tokens, feature_flags, code);
-    let ast = parser.parse_program()?;
-    
-    let optimized_ast = optimizer::optimize_ast(ast, &runtime);
-    
-    Ok(optimized_ast)
-}
-
-fn to_string_with_source_mapping(value: &impl serde::Serialize, include_source_mapping: bool) -> Result<String, serde_json::Error> {
-    if include_source_mapping {
-        to_string(value)
-    } else {
-        let filtered = LocationFilter {
-            inner: value,
-        };
-
-        to_string(&filtered)
-    }
-}
-
-fn to_string_pretty_with_source_mapping(value: &impl serde::Serialize, include_source_mapping: bool) -> Result<String, serde_json::Error> {
-    if include_source_mapping {
-        to_string_pretty(value)
-    } else {
-        let filtered = LocationFilter {
-            inner: value,
-        };
-
-        to_string_pretty(&filtered)
+fn create_feature_flags_from_cli_args(args: &clap::ArgMatches) -> FeatureFlags {
+    FeatureFlags {
+        allow_object_constructions: !args.get_flag("no-object-constructions"),
+        allow_array_constructions: !args.get_flag("no-array-constructions"),
+        allow_object_navigation: !args.get_flag("no-object-navigation"),
+        allow_variable_declaration: !args.get_flag("no-variable-declaration"),
+        allow_loops: !args.get_flag("no-loops"),
+        allow_object_keys: !args.get_flag("no-object-keys"),
+        allow_callbacks: !args.get_flag("no-callbacks"),
+        allow_conditionals: !args.get_flag("no-conditionals"),
+        allow_return_statements: !args.get_flag("no-return-statements"),
+        allow_loop_control: !args.get_flag("no-loop-control"),
+        allow_assignments: !args.get_flag("no-assignments"),
     }
 }

@@ -250,7 +250,7 @@ impl<'a> Parser<'a> {
             end_location.end_column
         );
 
-        Ok(Statement::IfStatement { 
+        Ok(Statement::IfStatement {
             condition, 
             body,
             else_body,
