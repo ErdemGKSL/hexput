@@ -12,13 +12,13 @@ cargo build --release
 
 ```bash
 # Basic usage
-cargo run -- "vl x = 5; print(x);"
+cargo run -p hexput-ast-cli -r -- "vl x = 5; print(x);"
 
 # Use :: separator for the code
-cargo run -- :: "vl x = 5; print(x);"
+cargo run -p hexput-ast-cli -r -- :: "vl x = 5; print(x);"
 
 # With feature flags
-cargo run -- --no-loops --no-callbacks :: "vl x = 5; print(x);"
+cargo run -p hexput-ast-cli -r -- --no-loops --no-callbacks :: "vl x = 5; print(x);"
 ```
 
 ## Language Features
@@ -159,13 +159,13 @@ Each node in the AST has a `type` property that identifies its kind.
 ### Basic Example
 
 ```bash
-cargo run -- --no-source-mapping :: "vl x = 5; vl y = x + 3; print(x, y);"
+cargo run -p hexput-ast-cli -r -- --no-source-mapping :: "vl x = 5; vl y = x + 3; print(x, y);"
 ```
 
 ### Disable Specific Features
 
 ```bash
-cargo run -- --no-variable-declaration :: "vl x = 5; vl y = x + 3; print(x, y);"
+cargo run -p hexput-ast-cli -r -- --no-variable-declaration :: "vl x = 5; vl y = x + 3; print(x, y);"
 ```
 
 This will throw error at the variable declarations.
