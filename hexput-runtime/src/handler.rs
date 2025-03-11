@@ -27,9 +27,9 @@ pub async fn handle_request(request_data: &str) -> Result<String, RuntimeError> 
 async fn handle_parse_request(request: WebSocketRequest) -> Result<String, RuntimeError> {
     let code = &request.code;
     let options = &request.options;
-    
+
     let feature_flags = options.to_feature_flags();
-    
+
     match hexput_ast_api::process_code(code, feature_flags) {
         Ok(program) => {
             let result = if options.minify {
@@ -49,7 +49,7 @@ async fn handle_parse_request(request: WebSocketRequest) -> Result<String, Runti
                         result: Some(value),
                         error: None,
                     };
-                    
+
                     info!("Successfully parsed AST for request: {}", request.id);
                     Ok(serde_json::to_string(&response)?)
                 }

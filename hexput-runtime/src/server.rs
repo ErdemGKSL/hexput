@@ -17,29 +17,29 @@ pub async fn run_server(config: ServerConfig) -> Result<(), RuntimeError> {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid server address")
     })?;
 
-        let listener = TcpListener::bind(&addr).await?;
+    let listener = TcpListener::bind(&addr).await?;
     info!("WebSocket server listening on: {}", addr);
 
-        let active_connections = Arc::new(Mutex::new(0));
+    let active_connections = Arc::new(Mutex::new(0));
 
-        while let Ok((stream, peer_addr)) = listener.accept().await {
+    while let Ok((stream, peer_addr)) = listener.accept().await {
         info!("New connection from: {}", peer_addr);
-        
-                let connections = active_connections.clone();
-        
-                {
+
+        let connections = active_connections.clone();
+
+        {
             let mut count = connections.lock().await;
             *count += 1;
             info!("Active connections: {}", *count);
         }
 
-                tokio::spawn(async move {
+        tokio::spawn(async move {
             match handle_connection(stream, peer_addr).await {
                 Ok(_) => info!("Connection from {} closed gracefully", peer_addr),
                 Err(e) => error!("Error handling connection from {}: {}", peer_addr, e),
             }
-            
-                        let mut count = connections.lock().await;
+
+            let mut count = connections.lock().await;
             *count -= 1;
             info!("Connection closed. Active connections: {}", *count);
         });
@@ -52,42 +52,45 @@ async fn handle_connection(stream: TcpStream, peer_addr: SocketAddr) -> Result<(
     let ws_stream = tokio_tungstenite::accept_async(stream).await?;
     info!("WebSocket connection established with: {}", peer_addr);
 
-        let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
 
-        while let Some(msg) = ws_receiver.next().await {
+    while let Some(msg) = ws_receiver.next().await {
         match msg {
             Ok(Message::Text(text)) => {
                 info!("Received text message from {}", peer_addr);
-                
-                                let response = match handle_request(&text).await {
+
+                let response = match handle_request(&text).await {
                     Ok(resp) => Message::Text(resp),
                     Err(e) => {
                         error!("Error processing request: {}", e);
-                        Message::Text(format!("{{\"error\":\"Internal server error: {}\"}}",
-                            e.to_string().replace('"', "\\\"")))
+                        Message::Text(format!(
+                            "{{\"error\":\"Internal server error: {}\"}}",
+                            e.to_string().replace('"', "\\\"")
+                        ))
                     }
                 };
-                
-                                if let Err(e) = ws_sender.send(response).await {
+
+                if let Err(e) = ws_sender.send(response).await {
                     error!("Error sending response to {}: {}", peer_addr, e);
                 }
-            },
+            }
             Ok(Message::Ping(data)) => {
-                                if let Err(e) = ws_sender.send(Message::Pong(data)).await {
+                if let Err(e) = ws_sender.send(Message::Pong(data)).await {
                     error!("Error sending pong to {}: {}", peer_addr, e);
                 }
-            },
+            }
             Ok(Message::Close(_)) => {
                 info!("Received close message from {}", peer_addr);
                 break;
-            },
+            }
             Err(e) => {
                 error!("Error reading message from {}: {}", peer_addr, e);
                 break;
-            },
-            _ => {}         }
+            }
+            _ => {}
+        }
     }
 
-        info!("Closing connection with: {}", peer_addr);
+    info!("Closing connection with: {}", peer_addr);
     Ok(())
 }
